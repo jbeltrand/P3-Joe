@@ -23,6 +23,7 @@ class PredictionCache:
 
     def SetCoefs(self, coefs):
         with self.lock:
+            self.evict_order = [] 
             self.cache = {}
             self.coefs = coefs
             
@@ -31,12 +32,13 @@ class PredictionCache:
         with self.lock:
             if self.coefs is None:
                 raise ValueError("Coefs must be set before making predictions.")
-
-            X_rounded = torch.round(X * 10000) / 10000
+            X_rounded = torch.round(X, decimals=4)
             X_tuple = tuple(X_rounded.flatten().tolist())
 
             if X_tuple in self.cache:
                 y = self.cache[X_tuple]
+                self.evict_order.remove(X_tuple)
+                self.evict_order.append(X_tuple)
                 return y, True
             else:
                 y = X @ self.coefs
